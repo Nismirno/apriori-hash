@@ -14,7 +14,6 @@
 #include "apriori.h"
 namespace po = boost::program_options;
 
-static const char* fileName = "data/association_rules.data";
 
 struct timer {
 	typedef std::chrono::high_resolution_clock clock;
@@ -30,12 +29,14 @@ struct timer {
 };
 
 bool parseCommandLine(int argc, char *argv[],
+                      std::string &fileName,
                       double &support, uint32 &nRules, Order &order) {
 	// TODO: Parse arguments
 	try {
 		po::options_description desc("Allowed options");
 		desc.add_options()
 			("help", "produce help message")
+			("filename,f", po::value<std::string>(), "path to the data file")
 			("support,s", po::value<double>(&support), "minimum support of the set")
 			("nRules,n", po::value<uint32>(&nRules), "number of rules to show")
 			("order,o", po::value<std::string>(),
@@ -61,6 +62,12 @@ bool parseCommandLine(int argc, char *argv[],
 			std::cout << "Please specify number of rules to print out." << std::endl;
 			std::cout << "'--nRules value' or '-n value'." << std::endl;
 			return false;
+		}
+
+		if (vm.count("filename")) {
+			fileName = vm["filename"].as<std::string>();
+		} else {
+			fileName = "data/test.data";
 		}
 
 		if (vm.count("order")) {
@@ -148,20 +155,21 @@ int main(int argc, char *argv[]) {
 
 	double support = 0;
 	uint32 nRules = 0;
+	std::string fileName = "";
 	Order order;
 
-	bool result = parseCommandLine(argc, argv, support, nRules, order);
+	bool result = parseCommandLine(argc, argv, fileName, support, nRules, order);
 	if (!result) {
 		return 1;
 	}
 
-	auto transactions = getMatrix(fileName);
+	auto transactions = getMatrix(fileName.data());
 	uint32 maxItems = 100;
 
 	// NOTE(myself): 5.152% - all items are passing k=1
 	apriori::AprioriAlg apriori(transactions, support, maxItems);
 	apriori.runAlg();
-	apriori.printRules(20, order);
+	apriori.printRules(nRules, order);
 
 	return 0;
 }
