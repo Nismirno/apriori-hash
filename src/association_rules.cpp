@@ -14,8 +14,7 @@
 #include "apriori.h"
 namespace po = boost::program_options;
 
-//static const char* fileName = "data/association_rules.data";
-static const char* fileName = "data/test.data";
+static const char* fileName = "data/association_rules.data";
 
 struct timer {
 	typedef std::chrono::high_resolution_clock clock;
@@ -30,8 +29,61 @@ struct timer {
 	}
 };
 
-void parseCommandLine(int argc, char *argv[]) {
+bool parseCommandLine(int argc, char *argv[],
+                      double &support, uint32 &nRules, Order &order) {
 	// TODO: Parse arguments
+	try {
+		po::options_description desc("Allowed options");
+		desc.add_options()
+			("help", "produce help message")
+			("support,s", po::value<double>(&support), "minimum support of the set")
+			("nRules,n", po::value<uint32>(&nRules), "number of rules to show")
+			("order,o", po::value<std::string>(),
+			 "order of rules by support (asc, desc)");
+
+		po::variables_map vm;
+		po::store(po::parse_command_line(argc, argv, desc), vm);
+		po::notify(vm);
+
+		if (vm.count("help")) {
+			std::cout << "Usage: options" << std::endl;
+			std::cout << desc << std::endl;
+			return false;
+		}
+
+		if (!vm.count("support")) {
+			std::cout << "Please specify support value in percents." << std::endl;
+			std::cout << "'--support value' or '-s value'." << std::endl;
+			return false;
+		}
+
+		if (!vm.count("nRules")) {
+			std::cout << "Please specify number of rules to print out." << std::endl;
+			std::cout << "'--nRules value' or '-n value'." << std::endl;
+			return false;
+		}
+
+		if (vm.count("order")) {
+			std::string orderStr = vm["order"].as<std::string>();
+			if (strcmp(orderStr.data(), "asc") <= 0) {
+				order = Order::ASC;
+			} else if (strcmp(orderStr.data(), "desc") <= 0) {
+				order = Order::DESC;
+			} else {
+				std::cout << "Unknown type of order." << std::endl;
+				std::cout << "Please use 'asc' (ascending) or 'desc' (descending)." << std::endl;
+				return false;
+			}
+		} else {
+			order = Order::NONE;
+		} 
+	}
+	catch (std::exception &e) {
+		std::cerr << "error: " << e.what() << std::endl;
+		return false;
+	}
+
+	return true;
 }
 
 std::string vecToStr(std::vector<uint32> vec) {
@@ -94,18 +146,22 @@ int main(int argc, char *argv[]) {
 	// NOTE: Temporary performance measurement
 	timer t;
 
-	// TODO: Parse command-line arguments with boost
-	parseCommandLine(argc, argv);
+	double support = 0;
+	uint32 nRules = 0;
+	Order order;
 
-	// 2D array
+	bool result = parseCommandLine(argc, argv, support, nRules, order);
+	if (!result) {
+		return 1;
+	}
+
 	auto transactions = getMatrix(fileName);
 	uint32 maxItems = 100;
-	// NOTE(myself): Benchmark 5.152% - all items
-//	double minSupport = 0.3;
-	double minSupport = 2.0 / 7.0 * 100.0;
-	apriori::AprioriAlg apriori(transactions, minSupport, maxItems);
+
+	// NOTE(myself): 5.152% - all items are passing k=1
+	apriori::AprioriAlg apriori(transactions, support, maxItems);
 	apriori.runAlg();
-	apriori.printRules(20, Order::DESC);
+	apriori.printRules(20, order);
 
 	return 0;
 }
