@@ -25,6 +25,7 @@ namespace apriori {
 	struct AssociationRule {
 		List x;
 		List y;
+		double setSupport;
 		double relSupport;
 		double confidence;
 	};

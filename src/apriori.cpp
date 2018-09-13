@@ -8,6 +8,7 @@
 #include <iostream>
 #include <cassert>
 #include <cmath>
+#include <iomanip>
 
 #include "defs.h"
 #include "apriori.h"
@@ -22,7 +23,7 @@ namespace apriori {
 		m_root = new Nodes();
 		m_root->reserve(maxItems);
 		m_nTransactions = m_transactions.size();
-		m_minAbsSupport = std::round(minSupport * m_nTransactions * 0.01);
+		m_minAbsSupport = std::ceil(minSupport * m_nTransactions * 0.01);
 	}
 
 	void AprioriAlg::runAlg() {
@@ -160,8 +161,10 @@ namespace apriori {
 			                    xSet.begin(), xSet.end(),
 			                    std::back_inserter(ySet));
 			AssociationRule rule;
-			rule.relSupport = (double)item->second->support / (double)m_nTransactions;
+			rule.relSupport = ((double)item->second->support /
+			                   (double)m_nTransactions) * 100.0;
 			rule.confidence = (double)support / (double)item->second->support;
+			rule.setSupport = (double)support / (double)m_nTransactions * 100.0;
 			rule.x = List(xSet);
 			rule.y = List(ySet);
 			m_rules.push_back(rule);
@@ -179,25 +182,38 @@ namespace apriori {
 		if (order == Order::ASC) {
 			std::sort(m_rules.begin(), m_rules.end(),
 			          [](const AssociationRule &lhs, const AssociationRule &rhs){
-				          return lhs.relSupport < rhs.relSupport;
+				          return lhs.setSupport < rhs.setSupport;
 			          });
 		} else if (order == Order::DESC) {
 			std::sort(m_rules.begin(), m_rules.end(),
 			          [](const AssociationRule &lhs, const AssociationRule &rhs){
-				          return lhs.relSupport > rhs.relSupport;
+				          return lhs.setSupport > rhs.setSupport;
 			          });
 		}
+		std::cout << std::left << std::setw(25) << std::setfill(' ')
+		          << "X -> Y" << "("
+		          << std::right << std::setw(12) << std::setfill(' ')
+		          << "supp(XY) %," 
+		          << std::right << std::setw(12) << std::setfill(' ')
+		          << "supp(X) %,"
+		          << std::right << std::setw(12) << std::setfill(' ')
+		          << "confidence)" << std::endl;
 		for (auto &rule : m_rules) {
 			if (iRules > nRules) {
 				break;
 			}
 			std::string xSet = vecToStr(rule.x);
 			std::string ySet = vecToStr(rule.y);
+			std::string ruleStr = xSet + " -> " + ySet;
 
-			std::cout << xSet << " -> " << ySet;
-		
-			std::cout << " (" << rule.relSupport
-			          << ", " << rule.confidence << ")" << std::endl;
+			std::cout << std::left << std::setw(25) << std::setfill(' ')
+			          << ruleStr << "("
+			          << std::right << std::setw(11) << std::setfill(' ')
+			          << rule.setSupport << ","
+			          << std::right << std::setw(11) << std::setfill(' ')
+			          << rule.relSupport << ","
+			          << std::right << std::setw(11) << std::setfill(' ')
+			          << rule.confidence << ")" << std::endl;
 			iRules++;
 		}		
 	}
