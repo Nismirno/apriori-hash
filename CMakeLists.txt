@@ -9,7 +9,7 @@ include_directories(include)
 file(GLOB SOURCES "src/*.cpp")
 file(COPY data DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
-find_package(Boost 1.32 COMPONENTS program_options REQUIRED)
+find_package(Boost 1.36 COMPONENTS program_options REQUIRED)
 
 add_executable(apriori ${SOURCES})
 
